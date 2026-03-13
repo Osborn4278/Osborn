@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Osborn Live Track</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2280%22>⚓</text></svg>">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Inter:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        :root { --bg: #020617; --card: #0f172a; --accent: #38bdf8; --alert: #ef4444; }
+        body { background-color: var(--bg); font-family: 'Inter', sans-serif; color: #f1f5f9; }
+        .digital { font-family: 'Orbitron', sans-serif; }
+        .nautical-card { background: var(--card); border: 1px solid #1e293b; border-radius: 12px; }
+        #map { height: 350px; width: 100%; border-radius: 12px 12px 0 0; }
+        .status-pulse { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+        .bg-online { background-color: #22c55e; box-shadow: 0 0 8px #22c55e; }
+        .bg-history { background-color: #64748b; }
+        /* Nuova regola per i titoli dei grafici */
+        .chart-title {font-size: 10px; text-transform: uppercase; color: #64748b; font-weight: bold; text-align: center; margin-bottom: 4px; }
+        .alert-border { border: 2px solid var(--alert) !important; animation: pulse 1.5s infinite; }
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } }
+        .gauge-box { position: relative; width: 65px; height: 65px; border: 2px solid #334155; border-radius: 50%; margin: 5px auto; }
+        .needle { position: absolute; top: 10%; left: 50%; width: 2px; height: 40%; background: var(--accent); transform-origin: bottom center; transition: transform 0.5s; }
+        .playback-panel { background: rgba(15, 23, 42, 0.98); border-top: 1px solid #334155; backdrop-filter: blur(15px); }
+        /* Aumentiamo il padding inferiore per evitare sovrapposizioni su mobile */
+        .main-content { padding-bottom: 180px; }
+        @media (max-width: 768px) { .main-content { padding-bottom: 150px; } }
+    </style>
+</head>
+<body class="main-content">
+
+    <nav class="p-4 border-b border-slate-800 flex justify-between items-center sticky top-0 z-[1000] bg-slate-900/90">
+        <div class="flex items-center gap-4">
+            <h1 class="text-xl font-bold tracking-widest digital text-white">OSBORN</h1>
+            <div class="flex items-center gap-2 bg-slate-800 px-3 py-1 rounded-full">
+                <span id="status-led" class="status-pulse bg-history"></span>
+                <span id="status-label" class="text-[10px] uppercase font-bold text-slate-400">Sync...</span>
+            </div>
+        </div>
+        <div class="flex gap-2 items-center">
+            <select id="trip-selector" class="bg-slate-800 text-[10px] border border-slate-700 rounded p-1 text-sky-400 outline-none w-32 md:w-48"></select>
+            <button onclick="logout()" class="text-[9px] bg-red-900/20 text-red-500 px-2 py-1 rounded">LOGOUT</button>
+        </div>
+    </nav>
+
+    <main class="max-w-6xl mx-auto p-4 space-y-4">
+        <!-- Mappa + Odometer + Current Time -->
+        <div class="nautical-card overflow-hidden">
+            <div id="map"></div>
+            <div class="bg-slate-900/50 p-3 flex flex-wrap justify-between items-center border-t border-slate-800 gap-4">
+                <div class="flex flex-col">
+                    <span class="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Distanza Percorsa</span>
+                    <div class="text-2xl digital text-sky-400"><span id="d-miles">0.00</span> <small class="text-xs text-slate-500">NM</small></div>
+                </div>
+                <div class="flex flex-col items-end">
+                    <span class="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Tempo Rilevamento</span>
+                    <div class="text-sm digital text-amber-400" id="d-current-time">--/--/---- --:--</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Grid Dati Numerici -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div class="nautical-card p-4 text-center">
+                <p class="text-[10px] text-slate-500 font-bold uppercase">Speed (SOG/STW)</p>
+                <div class="text-3xl digital text-white mt-1"><span id="d-sog">0.0</span><span class="text-slate-600 text-lg">/</span><span id="d-stw" class="text-sky-400">0.0</span></div>
+                <p class="text-[10px] text-slate-500">COG: <span id="d-cog">0</span>°</p>
+            </div>
+            <div id="card-wind" class="nautical-card p-4 text-center">
+                <p class="text-[10px] text-slate-500 font-bold uppercase">Wind (TWS/AWS)</p>
+                <div class="text-3xl digital text-white mt-1"><span id="d-tws">0.0</span><span class="text-slate-600 text-lg">/</span><span id="d-aws" class="text-amber-400">0.0</span></div>
+                <p class="text-[10px] text-slate-500">TWA: <span id="d-twa">0</span>° | AWA: <span id="d-awa">0</span>°</p>
+            </div>
+            <div id="card-roll" class="nautical-card p-4 text-center">
+                <p class="text-[10px] text-slate-500 font-bold uppercase">Heel (Roll)</p>
+                <div class="gauge-box"><div id="needle-roll" class="needle"></div></div>
+                <div class="text-sm digital text-white" id="d-roll-val">0.0°</div>
+            </div>
+            <div id="card-pitch" class="nautical-card p-4 text-center">
+                <p class="text-[10px] text-slate-500 font-bold uppercase">Pitch</p>
+                <div class="gauge-box" style="transform: rotate(90deg)"><div id="needle-pitch" class="needle"></div></div>
+                <div class="text-sm digital text-white" id="d-pitch-val">0.0°</div>
+            </div>
+        </div>
+
+            <div class="text-center text-[10px] text-slate-500 uppercase tracking-widest">
+            Temp: <span id="d-temp" class="text-white">--</span>°C | Press: <span id="d-press" class="text-white">--</span> hPa | Viaggio: <span id="trip-name" class="text-sky-500">--</span>
+        </div>
+
+    <!-- Grafici Temporali -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div class="nautical-card p-3">
+          <p class="chart-title">Andamento Vento (TWS)</p>
+          <div style="height: 150px;"><canvas id="chart-wind"></canvas></div>
+        </div>
+        <div class="nautical-card p-3">
+          <p class="chart-title">Pressione Barometrica</p>
+          <div style="height: 150px;"><canvas id="chart-press"></canvas></div>
+        </div>
+        <div class="nautical-card p-3">
+          <p class="chart-title">Temperatura Aria</p>
+          <div style="height: 150px;"><canvas id="chart-temp"></canvas></div>
+        </div>
+      </div> 
+       
+
+    </main>
+
+    <!-- Playback Footer -->
+    <footer class="fixed bottom-0 left-0 w-full playback-panel p-4 z-[2000] shadow-2xl">
+        <div class="max-w-6xl mx-auto">
+            <div class="flex justify-between text-[9px] mb-2 digital text-slate-500">
+                <span id="play-start">--:--</span>
+                <span id="play-current" class="text-sky-400 hidden md:inline">HISTORY</span>
+                <span id="play-end">--:--</span>
+            </div>
+            <input id="play-slider" type="range" min="0" max="0" value="0" class="w-full h-1 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-sky-500">
+            <div class="flex justify-center items-center gap-8 mt-4">
+                <button onclick="jumpTo(0)" class="text-slate-500 hover:text-white transition"><svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg></button>
+                <button onclick="togglePlay()" class="bg-sky-600 text-white p-3 rounded-full hover:bg-sky-500 shadow-lg transition"><svg id="play-icon" width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></button>
+                <button onclick="jumpTo(-1)" class="text-slate-500 hover:text-white transition"><svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M16 6h2v12h-2zM6 18l8.5-6L6 6z"/></svg></button>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        const GOOGLE_URL = "https://script.google.com/macros/s/AKfycbxBsvIAXEtxTUO5c696ZmAYQcFxAmdFLR9Ho87SOdImEGdjDgOXgMZaWRqBZqOKqNcd/exec";
+        let TOKEN = localStorage.getItem('osborn_token');
+        if (!TOKEN) { TOKEN = prompt("Chiave Osborn:"); if (TOKEN) localStorage.setItem('osborn_token', TOKEN); }
+
+        let fullData = [], filteredData = [], currentIndex = 0, isPlaying = false, playInterval;
+
+        function parseNauticalDate(str) {
+            if (!str) return new Date();
+            const parts = str.split(/[\/\s:]/);
+            if (parts.length < 5) return new Date(str);
+            return new Date(parts[2], parts[1]-1, parts[0], parts[3], parts[4]);
+        }
+
+        let map = L.map('map', { zoomControl: false }).setView([0,0], 2);
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(map);
+        const boatIcon = L.divIcon({ className: 'b-icon', html: `<div id="boat-ptr" style="transform: rotate(0deg)"><svg viewBox="0 0 24 24" width="30" height="30" fill="#38bdf8"><path d="M12,2L4.5,20.29L5.21,21L12,18L18.79,21L19.5,20.29L12,2Z"/></svg></div>`, iconSize: [30, 30], iconAnchor: [15, 15] });
+        let marker = L.marker([0,0], {icon: boatIcon}).addTo(map);
+        let trackLine = L.polyline([], {color: '#38bdf8', weight: 2, opacity: 0.6}).addTo(map);
+
+        const cOpt = { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { display: false }, y: { ticks: { color: '#475569', font: { size: 7 } }, grid: { color: '#1e293b' } } } };
+        let windChart = new Chart(document.getElementById('chart-wind'), { type: 'line', data: { labels: [], datasets: [{ data: [], borderColor: '#fbbf24', tension: 0.4, pointRadius: 0 }] }, options: cOpt });
+        let pressChart = new Chart(document.getElementById('chart-press'), { type: 'line', data: { labels: [], datasets: [{ data: [], borderColor: '#38bdf8', tension: 0.4, pointRadius: 0 }] }, options: cOpt });
+        let tempChart = new Chart(document.getElementById('chart-temp'), { type: 'line', data: { labels: [], datasets: [{ data: [], borderColor: '#f43f5e', tension: 0.4, pointRadius: 0 }] }, options: cOpt });
+
+        async function loadData() {
+            const selector = document.getElementById('trip-selector');
+            if (selector.value !== 'latest' && fullData.length > 0) return;
+
+            try {
+                const response = await fetch(`${GOOGLE_URL}?token=${TOKEN}`, { redirect: 'follow' });
+                const raw = await response.json();
+                
+                fullData = raw.map(d => ({
+                    ...d,
+                    lat: parseFloat(d.lat.toString().replace(',', '.')),
+                    lon: parseFloat(d.lon.toString().replace(',', '.')),
+                    sog: parseFloat(d.sog) || 0, stw: parseFloat(d.stw) || 0, cog: parseFloat(d.cog) || 0,
+                    tws: parseFloat(d.tws) || 0, aws: parseFloat(d.aws) || 0, twa: parseFloat(d.twa) || 0, awa: parseFloat(d.awa) || 0,
+                    roll: parseFloat(d.roll) || 0, pitch: parseFloat(d.pitch) || 0, temp: parseFloat(d.temp) || 0, press: parseFloat(d.press) || 0,
+                    timestamp: parseNauticalDate(d.t).getTime()
+                })).filter(d => !isNaN(d.lat));
+
+                updateSelector();
+                if (!isPlaying) selectTrip(selector.value || 'latest');
+            } catch (e) { document.getElementById('status-label').innerText = "OFFLINE"; }
+        }
+
+        function updateSelector() {
+            const sel = document.getElementById('trip-selector');
+            const current = sel.value;
+            const tripMap = {};
+            fullData.forEach(d => { if (!tripMap[d.tripId]) tripMap[d.tripId] = { name: d.tripName, start: d.timestamp }; });
+            const sortedTrips = Object.keys(tripMap).sort((a,b) => tripMap[b].start - tripMap[a].start);
+            sel.innerHTML = '<option value="latest">LIVE / MONITORAGGIO</option>';
+            sortedTrips.forEach(id => {
+                const dateStr = new Date(tripMap[id].start).toLocaleDateString('it-IT', {day:'2-digit', month:'2-digit'});
+                sel.innerHTML += `<option value="${id}">${dateStr} - ${tripMap[id].name}</option>`;
+            });
+            sel.value = current || 'latest';
+        }
+
+        function selectTrip(id) {
+            if (id === 'latest') {
+                const lastId = fullData[fullData.length - 1].tripId;
+                filteredData = fullData.filter(d => d.tripId === lastId);
+            } else {
+                filteredData = fullData.filter(d => d.tripId == id);
+            }
+            currentIndex = filteredData.length - 1;
+            document.getElementById('play-slider').max = currentIndex;
+            document.getElementById('play-slider').value = currentIndex;
+            
+            const dStart = new Date(filteredData[0].timestamp);
+            const dEnd = new Date(filteredData[currentIndex].timestamp);
+            document.getElementById('play-start').innerText = dStart.toLocaleDateString('it-IT', {day:'2-digit', month:'2-digit'}) + " " + dStart.toLocaleTimeString('it-IT', {hour:'2-digit', minute:'2-digit'});
+            document.getElementById('play-end').innerText = dEnd.toLocaleDateString('it-IT', {day:'2-digit', month:'2-digit'}) + " " + dEnd.toLocaleTimeString('it-IT', {hour:'2-digit', minute:'2-digit'});
+            
+            updateUI(filteredData[currentIndex]);
+        }
+
+        function calculateMiles(uptoIndex) {
+            let miles = 0;
+            for (let i = 1; i <= uptoIndex; i++) {
+                const p1 = filteredData[i-1];
+                const p2 = filteredData[i];
+                const hours = (p2.timestamp - p1.timestamp) / 3600000;
+                if (hours > 0 && hours < 0.5) { 
+                    miles += ((p1.sog + p2.sog) / 2) * hours;
+                }
+            }
+            return miles.toFixed(2);
+        }
+
+        function updateUI(d) {
+            if (!d) return;
+            const now = new Date().getTime();
+            const isOnline = (now - d.timestamp) < 600000;
+            document.getElementById('status-led').className = `status-pulse ${isOnline ? 'bg-online' : 'bg-history'}`;
+            document.getElementById('status-label').innerText = isOnline ? "Online" : "Storico";
+
+            document.getElementById('d-sog').innerText = d.sog.toFixed(1);
+            document.getElementById('d-stw').innerText = d.stw.toFixed(1);
+            document.getElementById('d-cog').innerText = Math.round(d.cog);
+            document.getElementById('d-tws').innerText = d.tws.toFixed(1);
+            document.getElementById('d-aws').innerText = d.aws.toFixed(1);
+            document.getElementById('d-twa').innerText = Math.round(d.twa);
+            document.getElementById('d-awa').innerText = Math.round(d.awa);
+            document.getElementById('d-roll-val').innerText = d.roll.toFixed(1) + "°";
+            document.getElementById('d-pitch-val').innerText = d.pitch.toFixed(1) + "°";
+            document.getElementById('d-temp').innerText = d.temp.toFixed(1);
+            document.getElementById('d-press').innerText = Math.round(d.press);
+            document.getElementById('trip-name').innerText = d.tripName;
+            document.getElementById('d-miles').innerText = calculateMiles(currentIndex);
+            
+            // Aggiorna Data e Ora del punto attuale
+            const currentPointDate = new Date(d.timestamp);
+            document.getElementById('d-current-time').innerText = currentPointDate.toLocaleDateString('it-IT', {day:'2-digit', month:'2-digit', year:'numeric'}) + " " + currentPointDate.toLocaleTimeString('it-IT', {hour:'2-digit', minute:'2-digit'});
+
+            document.getElementById('card-wind').className = (d.tws > 25) ? 'nautical-card p-4 text-center alert-border' : 'nautical-card p-4 text-center';
+            document.getElementById('card-roll').className = (Math.abs(d.roll) > 30) ? 'nautical-card p-4 text-center alert-border' : 'nautical-card p-4 text-center';
+
+            document.getElementById('needle-roll').style.transform = `translateX(-50%) rotate(${d.roll}deg)`;
+            document.getElementById('needle-pitch').style.transform = `translateX(-50%) rotate(${d.pitch}deg)`;
+
+            const pos = [d.lat, d.lon];
+            marker.setLatLng(pos);
+            document.getElementById('boat-ptr').style.transform = `rotate(${d.cog}deg)`;
+            trackLine.setLatLngs(filteredData.slice(0, currentIndex + 1).map(pt => [pt.lat, pt.lon]));
+            
+            if (!isPlaying) map.setView(pos, map.getZoom() < 10 ? 14 : map.getZoom());
+            updateCharts();
+        }
+
+        function updateCharts() {
+            const slice = filteredData.slice(Math.max(0, currentIndex - 480), currentIndex + 1);
+            const labels = slice.map(i => "");
+            windChart.data.labels = labels; windChart.data.datasets[0].data = slice.map(i => i.tws); windChart.update('none');
+            pressChart.data.labels = labels; pressChart.data.datasets[0].data = slice.map(i => i.press); pressChart.update('none');
+            tempChart.data.labels = labels; tempChart.data.datasets[0].data = slice.map(i => i.temp); tempChart.update('none');
+        }
+
+        function togglePlay() {
+            isPlaying = !isPlaying;
+            document.getElementById('play-icon').innerHTML = isPlaying ? '<path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>' : '<path d="M8 5v14l11-7z"/>';
+            if (isPlaying) {
+                playInterval = setInterval(() => {
+                    if (currentIndex < filteredData.length - 1) {
+                        currentIndex++;
+                        document.getElementById('play-slider').value = currentIndex;
+                        updateUI(filteredData[currentIndex]);
+                    } else { stopPlay(); }
+                }, 400);
+            } else { clearInterval(playInterval); }
+        }
+
+        function stopPlay() {
+            isPlaying = false; clearInterval(playInterval);
+            document.getElementById('play-icon').innerHTML = '<path d="M8 5v14l11-7z"/>';
+            currentIndex = filteredData.length - 1;
+            document.getElementById('play-slider').value = currentIndex;
+            updateUI(filteredData[currentIndex]);
+        }
+
+        function jumpTo(idx) {
+            stopPlay();
+            currentIndex = (idx === -1) ? filteredData.length - 1 : idx;
+            document.getElementById('play-slider').value = currentIndex;
+            updateUI(filteredData[currentIndex]);
+        }
+
+        document.getElementById('play-slider').addEventListener('input', (e) => { currentIndex = parseInt(e.target.value); updateUI(filteredData[currentIndex]); });
+        document.getElementById('trip-selector').addEventListener('change', (e) => { selectTrip(e.target.value); });
+        function logout() { localStorage.removeItem('osborn_token'); location.reload(); }
+
+        loadData();
+        setInterval(loadData, 30000);
+    </script>
+</body>
+</html>
