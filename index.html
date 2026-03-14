@@ -238,21 +238,24 @@ async function loadData() {
             }
         }
 
-        function updateSelector(trips) {
-            const sel = document.getElementById('trip-selector');
-            const current = sel.value;
-            
-            // Ordina i viaggi dal più recente
-            const sortedTrips = trips.sort((a,b) => new Date(b.start) - new Date(a.start));
+          function updateSelector(trips) {
+          const sel = document.getElementById('trip-selector');
+          const current = sel.value;
+    
+          // Ordina i viaggi dal più recente usando il nostro parser di date
+          const sortedTrips = trips.sort((a,b) => parseNauticalDate(b.start) - parseNauticalDate(a.start));
 
-            sel.innerHTML = '<option value="latest">LIVE / MONITORAGGIO</option>';
-            sortedTrips.forEach(t => {
-                const dateStr = new Date(t.start).toLocaleDateString('it-IT', {day:'2-digit', month:'2-digit'});
-                sel.innerHTML += `<option value="${t.id}">${dateStr} - ${t.name}</option>`;
-            });
-            sel.value = current || 'latest';
-        }
-
+    sel.innerHTML = '<option value="latest">LIVE / MONITORAGGIO</option>';
+    sortedTrips.forEach(t => {
+        // Usiamo il parser per evitare "Invalid Date"
+        const startDate = parseNauticalDate(t.start);
+        const dateStr = startDate.toLocaleDateString('it-IT', {day:'2-digit', month:'2-digit'});
+        
+        // Usiamo tripId e tripName (nomi corretti inviati da Google)
+        sel.innerHTML += `<option value="${t.tripId}">${dateStr} - ${t.tripName}</option>`;
+    });
+    sel.value = current || 'latest';
+}
         // Aggiungi questo evento per forzare il ricaricamento quando cambi viaggio
         document.getElementById('trip-selector').addEventListener('change', () => {
             filteredData = []; // Svuota per forzare il fetch dei nuovi dati
