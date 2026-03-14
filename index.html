@@ -295,26 +295,11 @@ async function loadData() {
         }
 
         function updateUI(d) {
-           if (!d || filteredData.length === 0) return;
-
-           // 1. CALCOLO ONLINE REALE
-           const now = Date.now(); // Ora attuale del PC in millisecondi
-           const lastRecord = filteredData[filteredData.length - 1];
-    
-           // Calcoliamo la differenza assoluta
-           const diff = Math.abs(now - lastRecord.timestamp);
-    
-          // Un sistema è online se l'ultimo dato nel foglio è più recente di 10 minuti
-          // e se l'utente ha selezionato "LIVE / MONITORAGGIO"
-          const isRecent = diff < 600000; 
-          const isLiveSelected = document.getElementById('trip-selector').value === 'latest';
-          const isOnline = isLiveSelected && isRecent;
-
-          const led = document.getElementById('status-led');
-          const label = document.getElementById('status-label');
-
-          led.className = `status-pulse ${isOnline ? 'bg-online' : 'bg-history'}`;
-          label.innerText = isOnline ? "Online" : "Storico";
+            if (!d) return;
+            const now = new Date().getTime();
+            const isOnline = (now - d.timestamp) < 600000;
+            document.getElementById('status-led').className = `status-pulse ${isOnline ? 'bg-online' : 'bg-history'}`;
+            document.getElementById('status-label').innerText = isOnline ? "Online" : "Storico";
 
             document.getElementById('d-sog').innerText = d.sog.toFixed(1);
             document.getElementById('d-stw').innerText = d.stw.toFixed(1);
