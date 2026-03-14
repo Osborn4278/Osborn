@@ -185,15 +185,27 @@
         let pressChart = new Chart(document.getElementById('chart-press'), { type: 'line', data: { labels: [], datasets: [{ data: [], borderColor: '#38bdf8', tension: 0.4, pointRadius: 0 }] }, options: cOpt });
         let tempChart = new Chart(document.getElementById('chart-temp'), { type: 'line', data: { labels: [], datasets: [{ data: [], borderColor: '#f43f5e', tension: 0.4, pointRadius: 0 }] }, options: cOpt });
 
-        async function loadData() {
+async function loadData() {
             const selector = document.getElementById('trip-selector');
-            if (selector.value !== 'latest' && fullData.length > 0) return;
-
+            const isLiveMode = (selector.value === 'latest' || selector.value === '');
+            
             try {
-                const response = await fetch(`${GOOGLE_URL}?token=${TOKEN}`, { redirect: 'follow' });
-                const raw = await response.json();
-                
-                fullData = raw.map(d => ({
+                // 1. Se il menu è vuoto, scarica solo la lista dei viaggi (VELOCE)
+                if (selector.options.length <= 1) {
+                    const resList = await fetch(`${GOOGLE_URL}?token=${TOKEN}&type=list`, { redirect: 'follow' });
+                    const trips = await resList.json();
+                    updateSelector(trips);
+                }
+
+                // 2. Scarica i dati reali: se Live solo ultimi 1000, se Storico solo quel viaggio
+                const targetTripId = isLiveMode ? 'latest' : selector.value;
+                const resData = await fetch(`${GOOGLE_URL}?token=${TOKEN}&type=data&tripId=${targetTripId}`, { redirect: 'follow' });
+                const raw = await resData.json();
+
+                if (raw.error) { logout(); return; }
+
+                // Conversione dati
+                filteredData = raw.map(d => ({
                     ...d,
                     lat: parseFloat(d.lat.toString().replace(',', '.')),
                     lon: parseFloat(d.lon.toString().replace(',', '.')),
@@ -203,24 +215,49 @@
                     timestamp: parseNauticalDate(d.t).getTime()
                 })).filter(d => !isNaN(d.lat));
 
-                updateSelector();
-                if (!isPlaying) selectTrip(selector.value || 'latest');
-            } catch (e) { document.getElementById('status-label').innerText = "OFFLINE"; }
+                // 3. Aggiorna l'interfaccia se non siamo in pausa playback
+                if (!isPlaying) {
+                    currentIndex = filteredData.length - 1;
+                    document.getElementById('play-slider').max = currentIndex;
+                    document.getElementById('play-slider').value = currentIndex;
+                    
+                    const dStart = new Date(filteredData[0].timestamp);
+                    const dEnd = new Date(filteredData[currentIndex].timestamp);
+                    document.getElementById('play-start').innerText = dStart.toLocaleString('it-IT', {day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit'});
+                    document.getElementById('play-end').innerText = dEnd.toLocaleString('it-IT', {day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit'});
+                    
+                    updateUI(filteredData[currentIndex]);
+                }
+
+                document.getElementById('status-label').innerText = isLiveMode ? "LIVE" : "STORICO";
+                document.getElementById('status-led').className = `status-pulse ${isLiveMode ? 'bg-online' : 'bg-history'}`;
+
+            } catch (e) { 
+                console.error("Errore caricamento:", e);
+                document.getElementById('status-label').innerText = "OFFLINE"; 
+            }
         }
 
-        function updateSelector() {
+        function updateSelector(trips) {
             const sel = document.getElementById('trip-selector');
             const current = sel.value;
-            const tripMap = {};
-            fullData.forEach(d => { if (!tripMap[d.tripId]) tripMap[d.tripId] = { name: d.tripName, start: d.timestamp }; });
-            const sortedTrips = Object.keys(tripMap).sort((a,b) => tripMap[b].start - tripMap[a].start);
+            
+            // Ordina i viaggi dal più recente
+            const sortedTrips = trips.sort((a,b) => new Date(b.start) - new Date(a.start));
+
             sel.innerHTML = '<option value="latest">LIVE / MONITORAGGIO</option>';
-            sortedTrips.forEach(id => {
-                const dateStr = new Date(tripMap[id].start).toLocaleDateString('it-IT', {day:'2-digit', month:'2-digit'});
-                sel.innerHTML += `<option value="${id}">${dateStr} - ${tripMap[id].name}</option>`;
+            sortedTrips.forEach(t => {
+                const dateStr = new Date(t.start).toLocaleDateString('it-IT', {day:'2-digit', month:'2-digit'});
+                sel.innerHTML += `<option value="${t.id}">${dateStr} - ${t.name}</option>`;
             });
             sel.value = current || 'latest';
         }
+
+        // Aggiungi questo evento per forzare il ricaricamento quando cambi viaggio
+        document.getElementById('trip-selector').addEventListener('change', () => {
+            filteredData = []; // Svuota per forzare il fetch dei nuovi dati
+            loadData();
+        });
 
         function selectTrip(id) {
             if (id === 'latest') {
