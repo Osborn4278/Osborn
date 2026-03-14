@@ -304,7 +304,7 @@ async function loadData() {
     // Prendiamo l'orario dell'ULTIMO record in assoluto (la fine della lista)
     const lastRecord = filteredData[filteredData.length - 1];
     const oraPC = new Date().getTime();
-    const oraUltimoDato = lastRecord.timestamp; // Già calcolato in loadData
+    const oraUltimoDato = parseOsbornDate(lastRecord.timestamp); // Già calcolato in loadData
     
     // Differenza in minuti tra ora e l'ultimo segnale della barca
     const diffMinuti = (oraPC - oraUltimoDato) / 1000 / 60;
