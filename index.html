@@ -188,6 +188,13 @@
 async function loadData() {
             const selector = document.getElementById('trip-selector');
             const isLiveMode = (selector.value === 'latest' || selector.value === '');
+             // --- IL CANCELLO: Blocca il refresh se non siamo in LIVE ---
+            // Se non siamo in modalità Live E abbiamo già dei dati visualizzati, 
+            // usciamo subito dalla funzione senza scaricare nulla e senza aggiornare la UI.
+            if (!isLiveMode && filteredData.length > 0) {
+            console.log("Analisi storica in corso: refresh automatico sospeso.");
+            return; 
+            }
             
             try {
                 // 1. Se il menu è vuoto, scarica solo la lista dei viaggi (VELOCE)
@@ -378,6 +385,11 @@ async function loadData() {
 
         loadData();
         setInterval(loadData, 30000);
+        document.getElementById('trip-selector').addEventListener('change', () => { 
+        // Svuotiamo i dati attuali per forzare il caricamento del nuovo viaggio scelto
+        filteredData = []; 
+        loadData(); 
+        });
     </script>
 </body>
 </html>
