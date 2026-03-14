@@ -294,58 +294,46 @@ async function loadData() {
             return miles.toFixed(2);
         }
 
- function updateUI(d) {
-    if (!d) return;
+        function updateUI(d) {
+            if (!d) return;
+            const now = new Date().getTime();
+            const isOnline = (now - d.timestamp) < 600000;
+            document.getElementById('status-led').className = `status-pulse ${isOnline ? 'bg-online' : 'bg-history'}`;
+            document.getElementById('status-label').innerText = isOnline ? "Online" : "Storico";
 
-    // 1. CALCOLO ONLINE REALE (Guarda l'ultimo dato disponibile, non quello visualizzato)
-    const lastRecord = filteredData[filteredData.length - 1];
-    const now = new Date().getTime();
-    const isRecent = (now - lastRecord.timestamp) < 600000; // 10 minuti
-    
-    // Siamo in Live solo se il selettore è su "latest" E il dato è fresco
-    const isLiveSelected = document.getElementById('trip-selector').value === 'latest';
-    const isOnline = isLiveSelected && isRecent;
+            document.getElementById('d-sog').innerText = d.sog.toFixed(1);
+            document.getElementById('d-stw').innerText = d.stw.toFixed(1);
+            document.getElementById('d-cog').innerText = Math.round(d.cog);
+            document.getElementById('d-tws').innerText = d.tws.toFixed(1);
+            document.getElementById('d-aws').innerText = d.aws.toFixed(1);
+            document.getElementById('d-twa').innerText = Math.round(d.twa);
+            document.getElementById('d-awa').innerText = Math.round(d.awa);
+            document.getElementById('d-roll-val').innerText = d.roll.toFixed(1) + "°";
+            document.getElementById('d-pitch-val').innerText = d.pitch.toFixed(1) + "°";
+            document.getElementById('d-temp').innerText = d.temp.toFixed(1);
+            document.getElementById('d-press').innerText = Math.round(d.press);
+            document.getElementById('trip-name').innerText = d.tripName;
+            document.getElementById('d-miles').innerText = calculateMiles(currentIndex);
+            
+            // Aggiorna Data e Ora del punto attuale
+            const currentPointDate = new Date(d.timestamp);
+            document.getElementById('d-current-time').innerText = currentPointDate.toLocaleDateString('it-IT', {day:'2-digit', month:'2-digit', year:'numeric'}) + " " + currentPointDate.toLocaleTimeString('it-IT', {hour:'2-digit', minute:'2-digit'});
 
-    document.getElementById('status-led').className = `status-pulse ${isOnline ? 'bg-online' : 'bg-history'}`;
-    document.getElementById('status-label').innerText = isOnline ? "Online" : "Storico";
+            document.getElementById('card-wind').className = (d.tws > 25) ? 'nautical-card p-4 text-center alert-border' : 'nautical-card p-4 text-center';
+            document.getElementById('card-roll').className = (Math.abs(d.roll) > 30) ? 'nautical-card p-4 text-center alert-border' : 'nautical-card p-4 text-center';
 
-    // 2. DISPLAY DATI (Assicurati che gli ID coincidano con l'HTML)
-    document.getElementById('d-sog').innerText = d.sog.toFixed(1);
-    document.getElementById('d-stw').innerText = d.stw.toFixed(1);
-    document.getElementById('d-cog').innerText = Math.round(d.cog);
-    document.getElementById('d-tws').innerText = d.tws.toFixed(1);
-    document.getElementById('d-aws').innerText = d.aws.toFixed(1);
-    document.getElementById('d-twa').innerText = Math.round(d.twa);
-    document.getElementById('d-awa').innerText = Math.round(d.awa);
-    document.getElementById('d-roll-val').innerText = d.roll.toFixed(1) + "°";
-    document.getElementById('d-pitch-val').innerText = d.pitch.toFixed(1) + "°";
-    document.getElementById('d-temp').innerText = d.temp.toFixed(1);
-    document.getElementById('d-press').innerText = Math.round(d.press);
-    document.getElementById('trip-name').innerText = d.tripName;
-    document.getElementById('d-miles').innerText = calculateMiles(currentIndex);
-    
-    // 3. FIX DATA E ORA (Usa l'oggetto Date già parsato in loadData)
-    const dateObj = new Date(d.timestamp);
-    document.getElementById('d-current-time').innerText = dateObj.toLocaleString('it-IT');
+            document.getElementById('needle-roll').style.transform = `translateX(-50%) rotate(${d.roll}deg)`;
+            document.getElementById('needle-pitch').style.transform = `translateX(-50%) rotate(${d.pitch}deg)`;
 
-    // 4. ALLERTI GRAFICI
-    document.getElementById('card-wind').className = (d.tws > 25) ? 'nautical-card p-4 text-center alert-border' : 'nautical-card p-4 text-center';
-    document.getElementById('card-roll').className = (Math.abs(d.roll) > 30) ? 'nautical-card p-4 text-center alert-border' : 'nautical-card p-4 text-center';
+            const pos = [d.lat, d.lon];
+            marker.setLatLng(pos);
+            document.getElementById('boat-ptr').style.transform = `rotate(${d.cog}deg)`;
+            trackLine.setLatLngs(filteredData.slice(0, currentIndex + 1).map(pt => [pt.lat, pt.lon]));
+            
+            if (!isPlaying) map.setView(pos, map.getZoom() < 10 ? 14 : map.getZoom());
+            updateCharts();
+        }
 
-    // 5. GAUGE E MAPPA
-    document.getElementById('needle-roll').style.transform = `translateX(-50%) rotate(${d.roll}deg)`;
-    document.getElementById('needle-pitch').style.transform = `translateX(-50%) rotate(${d.pitch}deg)`;
-
-    const pos = [d.lat, d.lon];
-    marker.setLatLng(pos);
-    document.getElementById('boat-ptr').style.transform = `rotate(${d.cog}deg)`;
-    
-    // Disegna la scia solo fino al punto che stiamo guardando
-    trackLine.setLatLngs(filteredData.slice(0, currentIndex + 1).map(pt => [pt.lat, pt.lon]));
-    
-    if (!isPlaying && isOnline) map.setView(pos, map.getZoom());
-    updateCharts();
-}
         function updateCharts() {
             const slice = filteredData.slice(Math.max(0, currentIndex - 480), currentIndex + 1);
             const labels = slice.map(i => "");
