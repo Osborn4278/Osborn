@@ -33,19 +33,39 @@
 </head>
 <body class="main-content">
 
-    <nav class="p-4 border-b border-slate-800 flex justify-between items-center sticky top-0 z-[1000] bg-slate-900/90">
-        <div class="flex items-center gap-4">
-            <h1 class="text-xl font-bold tracking-widest digital text-white">OSBORN</h1>
-            <div class="flex items-center gap-2 bg-slate-800 px-3 py-1 rounded-full">
+   <!-- Header a due righe per massima compatibilità mobile -->
+<nav class="p-3 border-b border-slate-800 sticky top-0 z-[1000] bg-slate-900/90 backdrop-blur-md">
+    <div class="max-w-6xl mx-auto space-y-3">
+        
+        <!-- Prima Riga: Logo e Stato Connessione -->
+        <div class="flex justify-between items-center">
+            <div class="flex items-center gap-3">
+                <h1 class="text-xl font-bold tracking-widest digital text-white">OSBORN</h1>
+            </div>
+            <div class="flex items-center gap-2 bg-slate-800/50 px-3 py-1 rounded-full border border-slate-700">
                 <span id="status-led" class="status-pulse bg-history"></span>
-                <span id="status-label" class="text-[10px] uppercase font-bold text-slate-400">Sync...</span>
+                <span id="status-label" class="text-[9px] uppercase font-bold text-slate-400 tracking-tighter">Inizializzazione</span>
             </div>
         </div>
+
+        <!-- Seconda Riga: Selettore Viaggi e Logout -->
         <div class="flex gap-2 items-center">
-            <select id="trip-selector" class="bg-slate-800 text-[10px] border border-slate-700 rounded p-1 text-sky-400 outline-none w-32 md:w-48"></select>
-            <button onclick="logout()" class="text-[9px] bg-red-900/20 text-red-500 px-2 py-1 rounded">LOGOUT</button>
+            <div class="relative flex-grow">
+                <select id="trip-selector" class="w-full bg-slate-800 text-[10px] border border-slate-700 rounded-lg p-2 text-sky-400 outline-none appearance-none focus:ring-1 ring-sky-500">
+                    <!-- Opzioni caricate da JS -->
+                </select>
+                <!-- Piccola freccia estetica per il select -->
+                <div class="absolute inset-y-0 right-2 flex items-center pointer-events-none text-sky-700">
+                    <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" fill-rule="evenodd"></path></svg>
+                </div>
+            </div>
+            <button onclick="logout()" class="text-[9px] bg-red-900/20 border border-red-900/40 text-red-500 px-3 py-2 rounded-lg font-bold hover:bg-red-500 hover:text-white transition uppercase">
+                Logout
+            </button>
         </div>
-    </nav>
+
+    </div>
+</nav>
 
     <main class="max-w-6xl mx-auto p-4 space-y-4">
         <!-- Mappa + Odometer + Current Time -->
