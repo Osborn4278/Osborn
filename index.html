@@ -217,6 +217,7 @@ async function loadData() {
 
                 // 3. Aggiorna l'interfaccia se non siamo in pausa playback
                 if (!isPlaying) {
+                    if (isLiveMode) {
                     currentIndex = filteredData.length - 1;
                     document.getElementById('play-slider').max = currentIndex;
                     document.getElementById('play-slider').value = currentIndex;
@@ -227,6 +228,7 @@ async function loadData() {
                     document.getElementById('play-end').innerText = dEnd.toLocaleString('it-IT', {day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit'});
                     
                     updateUI(filteredData[currentIndex]);
+                    }    
                 }
 
             
