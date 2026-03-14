@@ -295,33 +295,29 @@ async function loadData() {
         }
 
         function updateUI(d) {
-             if (!d || filteredData.length === 0) return;
+              if (!d || filteredData.length === 0) return;
 
-    // --- SOLUZIONE STATO ONLINE ---
-    const selector = document.getElementById('trip-selector');
+              // --- LOGICA LED ONLINE ---
+             const selector = document.getElementById('trip-selector');
     const isLiveSelected = (selector.value === 'latest' || selector.value === '');
     
-    // Prendiamo l'orario dell'ULTIMO record assoluto presente nel database
+    // Prendiamo l'orario dell'ULTIMO record in assoluto (la fine della lista)
     const lastRecord = filteredData[filteredData.length - 1];
-    const now = new Date().getTime();
+    const oraPC = new Date().getTime();
+    const oraUltimoDato = lastRecord.timestamp; // Già calcolato in loadData
     
-    // Calcoliamo la differenza tra ADESSO e l'ultimo dato ricevuto
-    // Se la differenza è meno di 10 minuti (600.000 ms) il Raspberry è acceso
-    const isRecent = (now - lastRecord.timestamp) < 600000;
+    // Differenza in minuti tra ora e l'ultimo segnale della barca
+    const diffMinuti = (oraPC - oraUltimoDato) / 1000 / 60;
 
-    // Siamo ONLINE solo se: l'utente vuole il Live E il Raspberry sta trasmettendo davvero
-    const isOnline = isLiveSelected && isRecent;
+    // ONLINE se: l'utente ha scelto LIVE e il dato è arrivato meno di 10 min fa
+    const isOnline = isLiveSelected && (diffMinuti >= 0 && diffMinuti < 10);
 
     const led = document.getElementById('status-led');
     const label = document.getElementById('status-label');
 
-    if (isOnline) {
-        led.className = "status-pulse bg-online";
-        label.innerText = "ONLINE";
-    } else {
-        led.className = "status-pulse bg-history";
-        label.innerText = "STORICO";
-    }
+    led.className = `status-pulse ${isOnline ? 'bg-online' : 'bg-history'}`;
+    label.innerText = isOnline ? "Online" : "Storico";
+    label.style.color = isOnline ? "#22c55e" : "#94a3b8";
 
             document.getElementById('d-sog').innerText = d.sog.toFixed(1);
             document.getElementById('d-stw').innerText = d.stw.toFixed(1);
@@ -391,6 +387,14 @@ async function loadData() {
             currentIndex = (idx === -1) ? filteredData.length - 1 : idx;
             document.getElementById('play-slider').value = currentIndex;
             updateUI(filteredData[currentIndex]);
+        }
+        
+        function parseOsbornDate(str) {
+           if (!str) return new Date();
+           // Divide "14/03/2026 10:48:30" in [14, 03, 2026, 10, 48, 30]
+           const p = str.split(/[\/\s:]/);
+           // Nota: il mese in JS parte da 0 (Gennaio = 0, Marzo = 2)
+           return new Date(p[2], p[1]-1, p[0], p[3], p[4], p[5]);
         }
 
         document.getElementById('play-slider').addEventListener('input', (e) => { currentIndex = parseInt(e.target.value); updateUI(filteredData[currentIndex]); });
