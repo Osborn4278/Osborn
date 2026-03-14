@@ -229,9 +229,6 @@ async function loadData() {
                     updateUI(filteredData[currentIndex]);
                 }
                 
-                if (!d) return;
-                const now = new Date().getTime();
-                const isOnline = (now - d.timestamp) < 600000;
                 document.getElementById('status-label').innerText = isLiveMode ? "LIVE" : "STORICO";
                 document.getElementById('status-led').className = `status-pulse ${isLiveMode ? 'bg-online' : 'bg-history'}`;
 
