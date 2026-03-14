@@ -216,7 +216,7 @@ async function loadData() {
                 })).filter(d => !isNaN(d.lat));
 
                 // 3. Aggiorna l'interfaccia se non siamo in pausa playback
-                if (!isPlaying) {
+                if (isLiveMode && !isPlaying) {
                     currentIndex = filteredData.length - 1;
                     document.getElementById('play-slider').max = currentIndex;
                     document.getElementById('play-slider').value = currentIndex;
