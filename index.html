@@ -296,10 +296,17 @@ async function loadData() {
 
         function updateUI(d) {
             if (!d) return;
+            // 1. CALCOLO ONLINE REALE (Guarda l'ultimo dato disponibile, non quello visualizzato)
+            const lastRecord = filteredData[filteredData.length - 1];
             const now = new Date().getTime();
-            const isOnline = (now - d.timestamp) < 600000;
-            document.getElementById('status-led').className = `status-pulse ${isOnline ? 'bg-online' : 'bg-history'}`;
-            document.getElementById('status-label').innerText = isOnline ? "Online" : "Storico";
+            const isRecent = (now - lastRecord.timestamp) < 600000; // 10 minuti
+    
+            // Siamo in Live solo se il selettore è su "latest" E il dato è fresco
+            const isLiveSelected = document.getElementById('trip-selector').value === 'latest';
+            const isOnline = isLiveSelected && isRecent;
+
+    document.getElementById('status-led').className = `status-pulse ${isOnline ? 'bg-online' : 'bg-history'}`;
+    document.getElementById('status-label').innerText = isOnline ? "Online" : "Storico";
 
             document.getElementById('d-sog').innerText = d.sog.toFixed(1);
             document.getElementById('d-stw').innerText = d.stw.toFixed(1);
