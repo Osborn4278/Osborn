@@ -90,11 +90,24 @@
                 <div class="text-3xl digital text-white mt-1"><span id="d-sog">0.0</span><span class="text-slate-600 text-lg">/</span><span id="d-stw" class="text-sky-400">0.0</span></div>
                 <p class="text-[10px] text-slate-500">COG: <span id="d-cog">0</span>°</p>
             </div>
-            <div id="card-wind" class="nautical-card p-4 text-center">
-                <p class="text-[10px] text-slate-500 font-bold uppercase">Wind (TWS/AWS)</p>
-                <div class="text-3xl digital text-white mt-1"><span id="d-tws">0.0</span><span class="text-slate-600 text-lg">/</span><span id="d-aws" class="text-amber-400">0.0</span></div>
-                <p class="text-[10px] text-slate-500">TWA: <span id="d-twa">0</span>° | AWA: <span id="d-awa">0</span>°</p>
-            </div>
+            <!-- Riquadro Vento Ottimizzato per Mobile -->
+           <div id="card-wind" class="nautical-card p-3 md:p-4 text-center">
+             <p class="text-[10px] text-slate-500 font-bold uppercase tracking-tighter">Wind (TWS/AWS)</p>
+             <div class="flex justify-center items-baseline gap-1 mt-1">
+             <!-- text-2xl su mobile, text-3xl su desktop. tracking-tighter per guadagnare spazio -->
+             <div class="text-2xl md:text-3xl digital text-white tracking-tighter">
+            <span id="d-tws">0.0</span>
+           </div>
+           <div class="text-slate-600 text-lg digital">/</div>
+           <div class="text-xl md:text-2xl digital text-amber-400 tracking-tighter">
+           <span id="d-aws">0.0</span>
+        </div>
+    </div>
+    <p class="text-[9px] md:text-[10px] text-slate-500 mt-1">
+        TWA:<span id="d-twa" class="text-slate-300">0</span>° | 
+        AWA:<span id="d-awa" class="text-slate-300">0</span>°
+    </p>
+</div>
             <div id="card-roll" class="nautical-card p-4 text-center">
                 <p class="text-[10px] text-slate-500 font-bold uppercase">Heel (Roll)</p>
                 <div class="gauge-box"><div id="needle-roll" class="needle"></div></div>
