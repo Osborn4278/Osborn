@@ -336,6 +336,12 @@ async function loadData() {
 
             document.getElementById('needle-roll').style.transform = `translateX(-50%) rotate(${d.roll}deg)`;
             document.getElementById('needle-pitch').style.transform = `translateX(-50%) rotate(${d.pitch}deg)`;
+            
+            // Aggiorna il link di Google Maps
+            const gMapsUrl = `https://www.google.com/maps?q=${d.lat},${d.lon}`;
+            document.getElementById('gmaps-link').href = gMapsUrl;
+            // Opzionale: mostra anche le coordinate scritte nel testo del link
+            document.getElementById('gmaps-link').innerText = `MAPS: ${d.lat.toFixed(4)}, ${d.lon.toFixed(4)}`;
 
             const pos = [d.lat, d.lon];
             marker.setLatLng(pos);
