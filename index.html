@@ -4,6 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Osborn Live Track</title>
+    <!-- Aggiunte per Web App (Full Screen) -->
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Osborn">
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="icon.png"> <!-- Opzionale: l'icona che apparirà su iPhone -->
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2280%22>⚓</text></svg>">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
@@ -226,6 +233,13 @@ async function loadData() {
                     timestamp: parseNauticalDate(d.t).getTime()
                 })).filter(d => !isNaN(d.lat));
 
+                // Se siamo in LIVE, teniamo SOLO i dati dell'ultimo viaggio per non mischiare le tracce
+                if (isLiveMode && filteredData.length > 0) {
+                    const currentLiveTripId = filteredData[filteredData.length - 1].tripId;
+                    filteredData = filteredData.filter(d => d.tripId === currentLiveTripId);
+                }
+                // ------------------------------------
+                
                 // 3. Aggiorna l'interfaccia se non siamo in pausa playback
                 if (!isPlaying) {
                     
