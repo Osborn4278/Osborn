@@ -1,11 +1,6 @@
 {
   "name": "Osborn Live Track",
   "short_name": "Osborn Live Track",
-  "start_url": "https://osborn4278.github.io/Osborn/index.html",
-  "display": "fullscreen",
-  "background_color": "#020617",
-  "theme_color": "#020617",
-  "orientation": "portrait-primary" 
   "icons": [
     {
       "src": "icon.png",
@@ -17,5 +12,10 @@
       "sizes": "64x64",
       "type": "image/png"
     }
-  ]
+  ],
+  "start_url": "https://osborn4278.github.io/Osborn/index.html",
+  "display": "fullscreen",
+  "background_color": "#020617",
+  "theme_color": "#020617",
+  "orientation": "portrait-primary"
 }
