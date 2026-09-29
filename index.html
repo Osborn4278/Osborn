@@ -186,7 +186,7 @@
         }
 
         let map = L.map('map', { zoomControl: false }).setView([0,0], 2);
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(map);
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png?key=${cb1_430j_1_0178125551cf6350f4fc2d1a}').addTo(map);
         const boatIcon = L.divIcon({ className: 'b-icon', html: `<div id="boat-ptr" style="transform: rotate(0deg)"><svg viewBox="0 0 24 24" width="30" height="30" fill="#38bdf8"><path d="M12,2L4.5,20.29L5.21,21L12,18L18.79,21L19.5,20.29L12,2Z"/></svg></div>`, iconSize: [30, 30], iconAnchor: [15, 15] });
         let marker = L.marker([0,0], {icon: boatIcon}).addTo(map);
         let trackLine = L.polyline([], {color: '#38bdf8', weight: 2, opacity: 0.6}).addTo(map);
